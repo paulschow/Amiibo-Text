@@ -226,6 +226,11 @@ if  __name__ =='__main__':
 	#scheduler.add_job(lambda: information.tweetStatus(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_KEY, ACCESS_SECRET, amazon, amiibo), 'interval', seconds=7200)
 	#scheduler.start()
 
+	try:
+		oldAmiibosList = information.searchAmiibo(amazon)
+	except:
+		print "TIMEOUT"
+
 
 	oldAmiibosList = information.searchAmiibo(amazon)
 	oldAmiibosPrice = information.printOut(amiibo, amazon)
@@ -233,7 +238,10 @@ if  __name__ =='__main__':
 	newAmiiboPrice = oldAmiiboPrice
 
 	while(True):
-		newAmiibosList = information.searchAmiibo(amazon)
+		try:
+			newAmiibosList = information.searchAmiibo(amazon)
+		except:
+			print "TIMEOUT"
 		newAmiiboPrice = information.printOut(amiibo, amazon)
 		time.sleep(1)
 		if oldAmiibosList != newAmiibosList:
@@ -248,8 +256,10 @@ if  __name__ =='__main__':
 				value = 2
 
 			print my_list
-			information.tweetAlert(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_KEY, ACCESS_SECRET, my_list, value)
-			print oldAmiibosList
+				try:
+				information.tweetAlert(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_KEY, ACCESS_SECRET, my_list, value)
+			except:
+				print "TWEET TOO LONG"
 			print oldAmiiboPrice
 			print newAmiibosList
 			print newAmiiboPrice

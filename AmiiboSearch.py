@@ -293,12 +293,12 @@ class AmiiboLookup():
 
 if  __name__ =='__main__':
 	
-	amazon = API("AKIAJHP3CQ7AMGGTO3UA", "KrqzdO52XLX33Fh7I1qtUZWD/cXydpHCTVhUehmU", "us", "omaans-20")
+	amazon = API("", "", "us", "")
 	
-	CONSUMER_KEY = 'TvHFKBUtZoRiNPaWnMdkDTZYM'#keep the quotes, replace this with your consumer key
-	CONSUMER_SECRET = 'U3xLXlcTMfG0OF6RGbd8NJI0G37d9vowgime8G72xXjRgaflaQ'#keep the quotes, replace this with your consumer secret key
-	ACCESS_KEY = '2980710862-dML89ZJKybIXdow3t7G9FRBOIw16qDAt6WK0tXB'#keep the quotes, replace this with your access token
-	ACCESS_SECRET = 'VesUKmVdMVOGmPI7DS715EJFlVYraTYIHUmV9E5xtGmep'#keep the quotes, replace this with your access token secret
+	CONSUMER_KEY = ''#keep the quotes, replace this with your consumer key
+	CONSUMER_SECRET = ''#keep the quotes, replace this with your consumer secret key
+	ACCESS_KEY = ''#keep the quotes, replace this with your access token
+	ACCESS_SECRET = ''#keep the quotes, replace this with your access token secret
 	
 
 	oldAmiibosListAmazon = []

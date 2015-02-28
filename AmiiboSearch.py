@@ -1,7 +1,6 @@
-##########################################################################
 # Author: Omar A. Ansari
-# Date Modified: 1/16/15
-# Version: 1.4
+# Date Modified: 1/17/15
+# Version: 1.5
 # 
 # This program queries Amazon.com for changes in Amiibo Selection and 
 # tweets about these changes.
@@ -32,7 +31,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import tweepy
 import time
 import datetime
-
+from lxml import html
+import requests
 #########################################################################
 # Class
 #########################################################################
@@ -53,13 +53,15 @@ class AmiiboLookup():
 	@staticmethod
 	def lookup(id_num, auth):
 
+
 		node = auth.item_lookup(id_num, ResponseGroup='Offers', Condition='All', MerchantId='All')
-		try:
-			for a in node.Items.Item.Offers.Offer:
-		    		return a.OfferListing.Price.FormattedPrice
+			
+		for a in node.Items.Item.Offers.Offer:
+			try:	  
+	  			return a.OfferListing.Price.FormattedPrice
 		    		break
-		except AttributeError:
-			return "NA"
+			except:
+				return "NA"
 
 #########################################################################
 # Method: printOut(e, items, auth)
@@ -112,16 +114,23 @@ class AmiiboLookup():
 
 		amiibosOnAmazon = []
 
-
-		for item in auth.item_search('VideoGames', Title='Amiibo', MerchantId="Amazon"):
+		
+		for item in auth.item_search('VideoGames', Title='Amiibo', MerchantId="Amazon", Availability = "Available"):
 			name = (item.ItemAttributes.Title)
+			identification = item.ASIN
+			identificationString =str(identification)
+			print identificationString
 			try:
-					spaces = str(name).encode("utf-8").count(' ')
-					if spaces < 4:
-						amiibosOnAmazon.append(str(name).encode('ascii',errors='ignore'))
-			except:
-					continue
-			time.sleep(1)
+				value = AmiiboLookup.lookup(identificationString, auth)
+			except: 
+				value = "NA"
+			print value
+			spaces = str(name).encode("utf-8").count(' ')
+			if spaces < 4 and (value != "NA"):
+				amiibosOnAmazon.append(str(name).encode('ascii',errors='ignore'))
+
+		time.sleep(1)
+		
 		return amiibosOnAmazon
 
 #########################################################################
@@ -148,12 +157,36 @@ class AmiiboLookup():
 		api = tweepy.API(auth)
 
 		if i == 1:
-			api.update_status("Amiibo addition: " + str(listChange) + " has been detected." + " " + str(datetime.datetime.now().time().microsecond)[:3])
-			print "Amiibo addition: " + str(listChange) + " has been detected." + " " + str(datetime.datetime.now().time().microsecond)[:3]
-		else:
-			api.update_status("Amiibo removal: " + str(listChange) + " has been detected." + " " + str(datetime.datetime.now().time().microsecond)[:3])
-			print "Amiibo removal: " + str(listChange) + " has been detected." + " " + str(datetime.datetime.now().time().microsecond)[:3]
+			try:	
+				api.update_status(" AZ Amiibo addition: " + str(listChange) + " has been detected." + " " + str(datetime.datetime.now().time().microsecond)[:3])
+				print "Amiibo addition: " + str(listChange) + " has been detected." + " " + str(datetime.datetime.now().time().microsecond)[:3]
+			except:
+				api.update_status("SEVERAL CHALLENGERS APPROACH! " + str(datetime.datetime.now().time().microsecond)[:3])
+				print "n"
+		if i == 2:
+			try:
+				api.update_status("AZ Amiibo removal: " + str(listChange) + " has been detected." + " " + str(datetime.datetime.now().time().microsecond)[:3])
+				print "Amiibo removal: " + str(listChange) + " has been detected." + " " + str(datetime.datetime.now().time().microsecond)[:3]
 	
+			except:
+				api.update_status("SEVERAL CHALLENGERS APPROACH! " + str(datetime.datetime.now().time().microsecond)[:3])
+				print "n"
+		if i == 3:
+			try:
+				api.update_status("GS New Amiibo detected." + " " + str(datetime.datetime.now().time().microsecond)[:3])
+				print "Stock availability has changed on Gamestop.com has been detected." + " " + str(datetime.datetime.now().time().microsecond)[:3]
+	
+			except:
+				api.update_status("SEVERAL CHALLENGERS APPROACH! " + str(datetime.datetime.now().time().microsecond)[:3])
+				print "n"
+		if i == 4:
+			try:
+				api.update_status("GS new Amiibo stock change has been detected." + " " + str(datetime.datetime.now().time().microsecond)[:3])
+				print "Stock availability has changed on Gamestop.com has been detected." + " " + str(datetime.datetime.now().time().microsecond)[:3]
+	
+			except:
+				api.update_status("SEVERAL CHALLENGERS APPROACH! " + str(datetime.datetime.now().time().microsecond)[:3])
+				print "n"
 #########################################################################
 # Static Method: tweetAlert(e, CKEY, CSECRET, AKEY, ASECRET, listChange)
 #
@@ -189,22 +222,91 @@ class AmiiboLookup():
 		time.sleep(.5)
 		print group2 + " " +str(datetime.datetime.now().time().second)
 
+##########################################################################
+
+	def loopThroughPosted(e):
+		
+		page = requests.get('http://www.gamestop.com/browse?nav=16k-3-amiibo,28zu0')
+		tree = html.fromstring(page.text)
+
+		amiiboList = []
+		firstText = "//a[@id="
+		secondText = "mainContentPlaceHolder_dynamicContent_ctl00_RepeaterResultFoundTemplate_ResultFoundPlaceHolder_1_ctl00_1_ctl00_1_StandardPlaceHolderTop_3_ctl00_3_rptResults_3_res_"
+		thirdText = "_hypTitle_"
+		fourthText = "]/text()"
+		counter = 0
+					
+		while(True):
+			#print counter
+			itemToSearch = ""
+			try:
+				itemToSearch = firstText + "'"  + secondText + str(counter) + thirdText + str(counter) + "'" + fourthText
+				#print itemToSearch
+				item = tree.xpath(itemToSearch)
+				if item:
+
+					amiiboList.append(item)
+					
+				else:
+					break
+			except:
+				break
+				print ("Done with items in search.")
+
+			counter = counter + 1 
+		
+		return amiiboList
+
+##########################################################################
+
+	def loopThroughAvailable(e):
+		
+		page = requests.get('http://www.gamestop.com/browse?nav=16k-3-amiibo,28zu0')
+		tree = html.fromstring(page.text)
+
+		amiiboList = []
+		firstTextAvailable = "//li[@id="
+		secondTextAvailable = "mainContentPlaceHolder_dynamicContent_ctl00_RepeaterResultFoundTemplate_ResultFoundPlaceHolder_1_ctl00_1_ctl00_1_StandardPlaceHolderTop_3_ctl00_3_rptResults_3_res_"
+		thirdTextAvailable = "_Li1_"
+		fourthText = "]/text()"
+		counter = 0
+
+		while(True):
+			itemToSearch = ""
+
+			availableToSearch = firstTextAvailable + "'"  + secondTextAvailable + str(counter) + thirdTextAvailable + str(counter) + "'" + fourthText
+			
+			item = tree.xpath(availableToSearch)
+			
+		
+			amiiboList.append(item)
+			counter = counter + 1
+			
+			if counter > len(AmiiboLookup.loopThroughPosted(e)):
+				break
+
+		return amiiboList
+
 #########################################################################
 # Main
 #########################################################################
 
 if  __name__ =='__main__':
 	
-	amazon = API("XXXXXXXX", "XXXXXXXXXXXXXXXXXXXXXXXX", "us", "XXXXX")
+	amazon = API("AKIAJHP3CQ7AMGGTO3UA", "KrqzdO52XLX33Fh7I1qtUZWD/cXydpHCTVhUehmU", "us", "omaans-20")
 	
-	CONSUMER_KEY = 'XXXXXXXXXXXXXXXXXXXXXXXX'#keep the quotes, replace this with your consumer key
-	CONSUMER_SECRET = 'XXXXXXXXXXXXXXXXXXXXXXXX'#keep the quotes, replace this with your consumer secret key
-	ACCESS_KEY = 'XXXXXXXXXXXXXXXXXXXXXXXX'#keep the quotes, replace this with your access token
-	ACCESS_SECRET = 'XXXXXXXXXXXXXXXXXXXXXXXX'#keep the quotes, replace this with your access token secret
+	CONSUMER_KEY = 'TvHFKBUtZoRiNPaWnMdkDTZYM'#keep the quotes, replace this with your consumer key
+	CONSUMER_SECRET = 'U3xLXlcTMfG0OF6RGbd8NJI0G37d9vowgime8G72xXjRgaflaQ'#keep the quotes, replace this with your consumer secret key
+	ACCESS_KEY = '2980710862-dML89ZJKybIXdow3t7G9FRBOIw16qDAt6WK0tXB'#keep the quotes, replace this with your access token
+	ACCESS_SECRET = 'VesUKmVdMVOGmPI7DS715EJFlVYraTYIHUmV9E5xtGmep'#keep the quotes, replace this with your access token secret
 	
 
-	oldAmiibosList = []
-	newAmiibosList = []
+	oldAmiibosListAmazon = []
+	newAmiibosListAmazon = []
+	oldAmiibosListGameStop = []
+	newAmiibosListGameStop = []
+	oldAmiibosPriceGameStop = []
+	newAmiibosPriceGameStop = []
 	oldAmiiboPrice = ""
 	newAmiiboPrice = ""
 	information = AmiiboLookup()
@@ -225,49 +327,98 @@ if  __name__ =='__main__':
 	#scheduler = BackgroundScheduler()
 	#scheduler.add_job(lambda: information.tweetStatus(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_KEY, ACCESS_SECRET, amazon, amiibo), 'interval', seconds=7200)
 	#scheduler.start()
-
-	try:
-		oldAmiibosList = information.searchAmiibo(amazon)
-	except:
-		print "TIMEOUT"
-
-
-	oldAmiibosList = information.searchAmiibo(amazon)
+	
+	
+	oldAmiibosListAmazon = information.searchAmiibo(amazon)
+	time.sleep(110)
 	oldAmiibosPrice = information.printOut(amiibo, amazon)
-	time.sleep(1)
-	newAmiiboPrice = oldAmiiboPrice
+	time.sleep(10)
+	oldAmiibosListGameStop = information.loopThroughPosted()
+	time.sleep(10)
+	
+	oldAmiibosPriceGameStop = information.loopThroughAvailable()
+	time.sleep(10)
 
+
+	
+
+	newAmiibosPriceGameStop = oldAmiibosPriceGameStop
+	newAmiibosListGameStop = oldAmiibosListGameStop
+	
+
+	
 	while(True):
-		try:
-			newAmiibosList = information.searchAmiibo(amazon)
-		except:
-			print "TIMEOUT"
-		newAmiiboPrice = information.printOut(amiibo, amazon)
-		time.sleep(1)
-		if oldAmiibosList != newAmiibosList:
-			print "NEW AMIIBOS DETECTED"
+		newAmiibosListGameStop = information.loopThroughPosted()
+		time.sleep(10)
+		newAmiibosPriceGameStop = information.loopThroughAvailable()
+		time.sleep(10)
+		newAmiibosListAmazon = information.searchAmiibo(amazon)
+		time.sleep(10)
+###########AMAZON###################################AMAZON##################################AMAZON###############################################		
+		if (oldAmiibosListAmazon != newAmiibosListAmazon) and (len(newAmiibosListAmazon) != 0) and (len(oldAmiibosListAmazon) != 0):
+			print oldAmiibosListAmazon
+			print newAmiibosListAmazon
+			print "NEW AMIIBOS DETECTED AZ"
 			my_list = []
 			value = 0
-			if len(newAmiibosList) > len(oldAmiibosList):
-				my_list = list(set(newAmiibosList) - set(oldAmiibosList))
+			if len(newAmiibosListAmazon) > len(oldAmiibosListAmazon):
+				my_list = list(set(newAmiibosListAmazon) ^  set(oldAmiibosListAmazon))
 				value = 1
-			else: 
-				my_list = list(set(oldAmiibosList) - set(newAmiibosList))
+			elif len(newAmiibosListAmazon) < len(oldAmiibosListAmazon): 
+				my_list = list(set(oldAmiibosListAmazon) ^ set(newAmiibosListAmazon))
 				value = 2
-
+			print value
 			print my_list
-				try:
+			try:
 				information.tweetAlert(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_KEY, ACCESS_SECRET, my_list, value)
 			except:
 				print "TWEET TOO LONG"
-			print oldAmiiboPrice
-			print newAmiibosList
-			print newAmiiboPrice
-			oldAmiibosList = newAmiibosList
-			time.sleep(60)
+
+			oldAmiibosListAmazon = newAmiibosListAmazon
+			time.sleep(1)
 		else:
-			oldAmiibosList = newAmiibosList
+			oldAmiibosListAmazon = newAmiibosListAmazon
 			print ("I'm sorry, there has been no change in the Amiibos available on Amazon.com. Trying again now.")
+			print oldAmiibosListAmazon
+			print newAmiibosListAmazon
+	
+###########AMAZON###################################AMAZON##################################AMAZON###############################################
+
+###########GAMESTOP###################################GAMESTOP##################################GAMESTOP#########################################
+		print "GET HERE"
+		print oldAmiibosListGameStop
+		print oldAmiibosPriceGameStop
+		print newAmiibosListGameStop
+		print newAmiibosPriceGameStop
+
+		if (oldAmiibosListGameStop != newAmiibosListGameStop) and (len(newAmiibosListGameStop) != 0) and (len(oldAmiibosListGameStop) != 0):
+			
+			print "NEW AMIIBOS DETECTED GS"
+			gameStop_list = []
+			gameStopValue = 0
+			if len(newAmiibosListGameStop) > len(oldAmiibosListGameStop):
+				gameStop_list = list(set(newAmiibosListGameStop) ^ set(oldAmiibosListGameStop))
+				gameStopValue = 1
+			elif len(newAmiibosListGameStop) < len(oldAmiibosListGameStop):
+				gameStop_list = list(set(oldAmiibosListGameStop) ^ set(newAmiibosListGameStop))
+				gameStopValue = 3
+
+			try:
+				information.tweetAlert(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_KEY, ACCESS_SECRET, gameStop_list, gameStopValue)
+			except:
+				print "TWEET TOO LONG"
+		
+		if (oldAmiibosPriceGameStop != newAmiibosPriceGameStop) and (len(newAmiibosPriceGameStop) != 0) and (len(oldAmiibosPriceGameStop) !=0):
+			print oldAmiibosPriceGameStop
+			print newAmiibosPriceGameStop
+			gameStop_list = []
+			gameStopValue = 4
+			try:
+				information.tweetAlert(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_KEY, ACCESS_SECRET, gameStop_list, gameStopValue)
+			except:
+				print "TWEET TOO LONG"
+
+###########GAMESTOP###################################GAMESTOP##################################GAMESTOP#########################################
 
 		#if oldAmiiboPrice != newAmiiboPrice:
 		#	information.tweetStatus(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_KEY, ACCESS_SECRET, amazon, amiibo)
